@@ -1,0 +1,25 @@
+User
+  Group
+    Rss
+    Rss
+  Group
+    Rss
+    Rss
+
+func update(Feed)
+	Feed -> Item[]
+
+Rss:
+  Url
+  Previous (last x)
+
+update Rss
+  fetch Url
+  check new Previous
+  new -> store
+# new -> online subscribers
+
+store:
+  get -> Rss
+  get -> User
+  store <- Rss, new
