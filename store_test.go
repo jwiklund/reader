@@ -5,8 +5,7 @@ import (
 )
 
 func TestPutGetFeed(t *testing.T) {
-	s := NewStore()
-	go ServeStore(":memory:", s)
+	s := NewStore(":memory:")
 	defer s.Close()
 
 	err := s.Put(&Feed{Url: "http://localhost/", Id: "feed", Title: "Title"})
@@ -26,18 +25,17 @@ func TestPutGetFeed(t *testing.T) {
 }
 
 func TestUpdateFeed(t *testing.T) {
-	s := NewStore()
-	go ServeStore(":memory:", s)
+	s := NewStore(":memory:")
 	defer s.Close()
 
-	feed := Feed{Url: "http://localhost/", Id: "feed", Title: "Title"}
-	err := s.Put(&feed)
+	feed := &Feed{Url: "http://localhost/", Id: "feed", Title: "Title"}
+	err := s.Put(feed)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	feed.Title = "Title2"
 	feed.Url = "http://localhost2/"
-	err = s.Put(&feed)
+	err = s.Put(feed)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -51,20 +49,19 @@ func TestUpdateFeed(t *testing.T) {
 }
 
 func TestItemsInFeed(t *testing.T) {
-	s := NewStore()
-	go ServeStore(":memory:", s)
+	s := NewStore(":memory:")
 	defer s.Close()
 
-	feed := Feed{Id: "feed1", Title: "Feed1", Type: "rss1", Url: "http://localhost/1"}
+	feed := &Feed{Id: "feed1", Title: "Feed1", Type: "rss1", Url: "http://localhost/1"}
 	t.Log("Original 1 " + feed.String())
-	err := s.Put(&feed)
+	err := s.Put(feed)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	feed = Feed{Id: "feed2", Title: "Feed2", Type: "rss2", Url: "http://localhost/2"}
+	feed = &Feed{Id: "feed2", Title: "Feed2", Type: "rss2", Url: "http://localhost/2"}
 	feed.AddItem(&Item{Id: "hash", Url: "http://localhost/2/item1"})
 	t.Log("Original 2 " + feed.String())
-	err = s.Put(&feed)
+	err = s.Put(feed)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

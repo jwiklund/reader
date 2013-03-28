@@ -5,6 +5,22 @@ import (
 	"time"
 )
 
+type Rss interface {
+	Fetch(id string) error
+	FetchAll() []error
+	Close()
+}
+
+func NewRss(store Store) Rss {
+	handler := rsshandler{store: store}
+	handler.FetchChan = make(chan FetchRssRequest, 100)
+	handler.FetchAllChan = make(chan FetchAllRssRequest, 100)
+	handler.reader = rss.Read
+	handler.store = store
+	go handler.serve()
+	return &handler
+}
+
 type FetchRssRequest struct {
 	Id     string
 	Result chan error
@@ -19,13 +35,9 @@ type rsshandler struct {
 	FetchChan    chan FetchRssRequest
 	FetchAllChan chan FetchAllRssRequest
 	CloseChan    chan bool
-	store        *Store
-	reader       func(string) (*rss.Channel, error)
-}
 
-type Rss interface {
-	Fetch(id string) error
-	FetchAll() []error
+	store  Store
+	reader func(string) (*rss.Channel, error)
 }
 
 func (handler *rsshandler) Fetch(id string) error {
@@ -40,13 +52,8 @@ func (handler rsshandler) FetchAll() []error {
 	return <-req.Result
 }
 
-func NewRss(store *Store) Rss {
-	handler := rsshandler{store: store}
-	handler.FetchChan = make(chan FetchRssRequest, 100)
-	handler.FetchAllChan = make(chan FetchAllRssRequest, 100)
-	handler.reader = rss.Read
-	go handler.serve()
-	return &handler
+func (handler rsshandler) Close() {
+	handler.CloseChan <- true
 }
 
 func (handler *rsshandler) serve() error {
@@ -57,6 +64,9 @@ func (handler *rsshandler) serve() error {
 		case r := <-handler.FetchAllChan:
 			r.Result <- handler.fetchAll(r.Type)
 		case <-handler.CloseChan:
+			close(handler.FetchChan)
+			close(handler.FetchAllChan)
+			close(handler.CloseChan)
 			return nil
 		}
 	}
@@ -85,17 +95,17 @@ func (handler *rsshandler) fetch(id string) error {
 	curr, err := rss.Read(feed.Url)
 	if err != nil {
 		feed.LastError = err.Error()
-		handler.store.Put(&feed)
+		handler.store.Put(feed)
 		return err
 	}
 	items, err := convertToItems(curr)
 	if err != nil {
 		feed.LastError = err.Error()
-		handler.store.Put(&feed)
+		handler.store.Put(feed)
 		return err
 	}
 	feed.AddNewItems(items)
-	err = handler.store.Put(&feed)
+	err = handler.store.Put(feed)
 	return err
 }
 
