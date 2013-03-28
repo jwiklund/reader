@@ -13,24 +13,20 @@ type ResourceResponse struct {
 	Message string
 }
 
-func writeError(err error) []byte {
-	json := "{\"Status\": \"Error\", \"Message\": \"" + err.Error() + "\"}"
-	return []byte(json)
+func respond(w http.ResponseWriter, data interface{}, err error) {
+	if err != nil {
+		w.Write([]byte("{\"Status\": \"Error\", \"Message\": \"" + err.Error() + "\"}"))
+		return
+	}
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		w.Write([]byte("{\"Status\": \"Error\", \"Message\": \"" + err.Error() + "\"}"))
+	} else {
+		w.Write(bytes)
+	}
 }
 
 func SetupResources(s Store, rss Rss) {
-	respond := func(w http.ResponseWriter, data interface{}, err error) {
-		if err != nil {
-			w.Write(writeError(err))
-			return
-		}
-		bytes, err := json.Marshal(data)
-		if err != nil {
-			w.Write(writeError(err))
-		} else {
-			w.Write(bytes)
-		}
-	}
 	usagePage := template.Must(template.ParseFiles("html/usage.html"))
 	usageHandler := func(w http.ResponseWriter, r *http.Request) {
 		usagePage.Execute(w, "")
@@ -94,9 +90,24 @@ func SetupResources(s Store, rss Rss) {
 		}
 		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
 	}
-	http.HandleFunc("/", usageHandler)
+	dir := http.Dir(".")
+	fileHandler := func(w http.ResponseWriter, r *http.Request) {
+		file, err := dir.Open("html/index.html")
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		buf, err := ioutil.ReadAll(file)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Write(buf)
+	}
 	http.HandleFunc("/usage", usageHandler)
 	http.HandleFunc("/feed", infoHandler)
 	http.HandleFunc("/feed/", feedHandler)
 	http.HandleFunc("/refresh/", refreshHandler)
+	http.HandleFunc("/", fileHandler)
+	http.Handle("/js/", http.FileServer(dir))
 }
