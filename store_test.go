@@ -55,13 +55,13 @@ func TestItemsInFeed(t *testing.T) {
 	go ServeStore(":memory:", s)
 	defer s.Close()
 
-	feed := Feed{Id: "feed1", Title: "Feed1", Type: "rss", Url: "http://localhost/1"}
+	feed := Feed{Id: "feed1", Title: "Feed1", Type: "rss1", Url: "http://localhost/1"}
 	t.Log("Original 1 " + feed.String())
 	err := s.Put(&feed)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	feed = Feed{Id: "feed2", Title: "Feed2", Type: "rss", Url: "http://localhost/2"}
+	feed = Feed{Id: "feed2", Title: "Feed2", Type: "rss2", Url: "http://localhost/2"}
 	feed.AddItem(&Item{Id: "hash", Url: "http://localhost/2/item1"})
 	t.Log("Original 2 " + feed.String())
 	err = s.Put(&feed)
@@ -87,5 +87,22 @@ func TestItemsInFeed(t *testing.T) {
 	}
 	if feed.Items[0].Id != "hash" || feed.Items[0].Url != "http://localhost/2/item1" {
 		t.Fatalf("Wrong item : %s %s", feed.Items[0].Id, feed.Items[0].Url)
+	}
+
+	ids, err := s.GetByType("rss1")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	t.Log(len(ids))
+	if ids[0] != "feed1" {
+		t.Fatal("Wrong feeds by type1 " + ids[0])
+	}
+	ids, err = s.GetByType("rss2")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	t.Log(len(ids))
+	if ids[0] != "feed2" {
+		t.Fatal("Wrong feeds by type2 " + ids[0])
 	}
 }

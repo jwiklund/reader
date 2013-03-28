@@ -4,33 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	sqlite "github.com/gwenn/gosqlite"
-	"strconv"
 )
-
-type Item struct {
-	Id          string
-	Title       string
-	Description string
-	Content     string
-	Type        string
-	Url         string
-}
-
-type Feed struct {
-	Id    string
-	Title string
-	Type  string
-	Url   string
-	Items []Item
-}
-
-func (f *Feed) String() string {
-	return "Feed(" + f.Id + ", title=" + f.Title + ", url=" + f.Url + ", len(items)=" + strconv.Itoa(len(f.Items)) + ")"
-}
-
-func (f *Feed) AddItem(item *Item) {
-	f.Items = append(f.Items, *item)
-}
 
 type FeedOrError struct {
 	Feed  Feed
@@ -42,6 +16,16 @@ type GetFeedRequest struct {
 	Feed chan FeedOrError
 }
 
+type IdOrError struct {
+	Id    []string
+	Error error
+}
+
+type GetTypeRequest struct {
+	Type string
+	Feed chan IdOrError
+}
+
 type PutFeedRequest struct {
 	Feed  Feed
 	Error chan error
@@ -49,6 +33,7 @@ type PutFeedRequest struct {
 
 type Store struct {
 	GetFeedChan chan *GetFeedRequest
+	GetTypeChan chan *GetTypeRequest
 	PutFeedChan chan *PutFeedRequest
 	CloseChan   chan bool
 }
@@ -56,6 +41,7 @@ type Store struct {
 func NewStore() *Store {
 	store := Store{}
 	store.GetFeedChan = make(chan *GetFeedRequest, 100)
+	store.GetTypeChan = make(chan *GetTypeRequest, 100)
 	store.PutFeedChan = make(chan *PutFeedRequest, 100)
 	store.CloseChan = make(chan bool)
 	return &store
@@ -75,6 +61,13 @@ func (s *Store) Get(id string) (Feed, error) {
 	return r.Feed, r.Error
 }
 
+func (s *Store) GetByType(feedType string) ([]string, error) {
+	g := GetTypeRequest{feedType, make(chan IdOrError)}
+	s.GetTypeChan <- &g
+	r := <-g.Feed
+	return r.Id, r.Error
+}
+
 func (s *Store) Close() {
 	s.CloseChan <- true
 }
@@ -85,16 +78,18 @@ func ServeStore(path string, store *Store) error {
 		return err
 	}
 	defer db.Close()
-	err = db.Exec("create table if not exists feed(id string primary key, json string)")
+	err = db.Exec("create table if not exists feed(id string primary key, type string, json string)")
 	if err != nil {
 		return err
 	}
 	for {
 		select {
-		case r := <-store.GetFeedChan:
-			r.Feed <- getFeed(db, r.Id)
 		case c := <-store.PutFeedChan:
 			c.Error <- putFeed(db, c.Feed)
+		case r := <-store.GetFeedChan:
+			r.Feed <- getFeed(db, r.Id)
+		case c := <-store.GetTypeChan:
+			c.Feed <- getType(db, c.Type)
 		case <-store.CloseChan:
 			return nil
 		}
@@ -107,12 +102,12 @@ func putFeed(conn *sqlite.Conn, feed Feed) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := conn.Prepare("insert or replace into feed(id, json) values (?, ?)")
+	stmt, err := conn.Prepare("insert or replace into feed(id, type, json) values (?, ?, ?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Finalize()
-	err = stmt.Exec(feed.Id, bytes)
+	err = stmt.Exec(feed.Id, feed.Type, bytes)
 	if err != nil {
 		stmt.Finalize()
 		return err
@@ -139,4 +134,23 @@ func getFeed(conn *sqlite.Conn, id string) FeedOrError {
 		return FeedOrError{Error: errors.New("not found")}
 	}
 	return FeedOrError{feed, nil}
+}
+
+func getType(conn *sqlite.Conn, feedType string) IdOrError {
+	stmt, err := conn.Prepare("select id from feed where type = ?")
+	if err != nil {
+		return IdOrError{Error: err}
+	}
+	defer stmt.Finalize()
+	ids := []string{}
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+		var id string
+		s.Scan(&id)
+		ids = append(ids, id)
+		return nil
+	}, feedType)
+	if err != nil {
+		return IdOrError{Error: err}
+	}
+	return IdOrError{Id: ids}
 }
