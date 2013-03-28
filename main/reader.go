@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/jwiklund/reader"
 	"net/http"
@@ -18,11 +17,5 @@ func run() {
 }
 
 func main() {
-	i := []reader.Item{reader.Item{Id: "haha"}}
-	b, e := json.Marshal(i)
-	if e != nil {
-		fmt.Println(e.Error())
-	} else {
-		fmt.Println(string(b))
-	}
+	run()
 }

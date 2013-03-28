@@ -119,8 +119,13 @@ func convertToItems(channel *rss.Channel) ([]Item, error) {
 		to.Title = from.Title
 		to.Description = from.Description
 		to.Content = from.Content
-		to.Type = from.Enclosure.Type
-		to.Url = from.Enclosure.URL
+		if from.Enclosure.URL != "" {
+			to.Type = from.Enclosure.Type
+			to.Url = from.Enclosure.URL
+		} else {
+			to.Type = "Link"
+			to.Url = from.Link
+		}
 		items[i] = to
 	}
 	return items, nil
