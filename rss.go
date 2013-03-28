@@ -15,6 +15,7 @@ func NewRss(store Store) Rss {
 	handler := rsshandler{store: store}
 	handler.FetchChan = make(chan FetchRssRequest, 100)
 	handler.FetchAllChan = make(chan FetchAllRssRequest, 100)
+	handler.CloseChan = make(chan bool)
 	handler.reader = rss.Read
 	handler.store = store
 	go handler.serve()

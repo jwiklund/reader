@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"strconv"
 	"testing"
 )
 
@@ -72,7 +73,7 @@ func TestItemsInFeed(t *testing.T) {
 	}
 	t.Log("feed1 " + feed.String())
 	if feed.Items != nil {
-		t.Fatal("feed 1 got some items")
+		t.Fatal("feed got to may items")
 	}
 	feed, err = s.Get("feed2")
 	if err != nil {
@@ -101,5 +102,27 @@ func TestItemsInFeed(t *testing.T) {
 	t.Log(len(ids))
 	if ids[0] != "feed2" {
 		t.Fatal("Wrong feeds by type2 " + ids[0])
+	}
+}
+
+func TestGetInfo(t *testing.T) {
+	s := NewStore(":memory:")
+	defer s.Close()
+
+	i1 := []Item{Item{Id: "Id1.1"}}
+	i2 := []Item{Item{Id: "Id2.1"}}
+	s.Put(&Feed{Id: "id1", Items: i1})
+	s.Put(&Feed{Id: "id2", Items: i2})
+	info, err := s.GetAllInfo()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if len(info) != 2 {
+		t.Fatal("Wrong number of infos " + strconv.Itoa(len(info)))
+	}
+	for i := 0; i < len(info); i++ {
+		if len(info[i].Items) != 0 {
+			t.Fatal("Got items from info " + info[i].ItemIds().String())
+		}
 	}
 }

@@ -1,0 +1,39 @@
+<html>
+<title>Usage</title>
+<body>
+<h1>Usage</h1>
+<h2>GET /usage Usage</h2>
+This page
+<h2>GET /feed</h2>
+<pre>
+[
+	{ "Id"
+	  "LatestFetched"
+	  "LatestError"
+	  "ToalItems"
+	}
+]
+</pre>
+<h2>PUT /feed</h2>
+<pre>
+{
+	"Id"
+	"Type"
+	"Url"
+}
+</pre>
+<h2>GET /feed/id</h2>
+<pre>
+[
+	"Id"
+	"Url"
+]
+</pre>
+<h2>PUT /feed/id</h2>
+<pre>
+{
+	"Read": ["Id", "Id"]
+}
+</pre>
+</body>
+</html>
