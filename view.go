@@ -3,9 +3,9 @@ package reader
 import (
 	"encoding/json"
 	"errors"
-	"html/template"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 type ResourceResponse struct {
@@ -26,11 +26,24 @@ func respond(w http.ResponseWriter, data interface{}, err error) {
 	}
 }
 
-func SetupResources(s Store, rss Rss) {
-	usagePage := template.Must(template.ParseFiles("html/usage.html"))
-	usageHandler := func(w http.ResponseWriter, r *http.Request) {
-		usagePage.Execute(w, "")
+func serveFile(fname string) func(http.ResponseWriter, *http.Request) {
+	f := func(w http.ResponseWriter, r *http.Request) {
+		file, err := os.Open(fname)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		buf, err := ioutil.ReadAll(file)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.Write(buf)
 	}
+	return f
+}
+
+func SetupResources(s Store, rss Rss) {
 	infoHandler := func(w http.ResponseWriter, r *http.Request) {
 		feeds, err := s.GetAllInfo()
 		respond(w, feeds, err)
@@ -90,24 +103,10 @@ func SetupResources(s Store, rss Rss) {
 		}
 		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
 	}
-	dir := http.Dir(".")
-	fileHandler := func(w http.ResponseWriter, r *http.Request) {
-		file, err := dir.Open("html/index.html")
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			return
-		}
-		buf, err := ioutil.ReadAll(file)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			return
-		}
-		w.Write(buf)
-	}
-	http.HandleFunc("/usage", usageHandler)
+	http.HandleFunc("/usage", serveFile("html/usage.html"))
 	http.HandleFunc("/feed", infoHandler)
 	http.HandleFunc("/feed/", feedHandler)
 	http.HandleFunc("/refresh/", refreshHandler)
-	http.HandleFunc("/", fileHandler)
-	http.Handle("/js/", http.FileServer(dir))
+	http.HandleFunc("/", serveFile("html/index.html"))
+	http.Handle("/js/", http.FileServer(http.Dir(".")))
 }
