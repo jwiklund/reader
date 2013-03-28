@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
-	"strings"
 )
 
 type ResourceResponse struct {
@@ -20,103 +19,84 @@ func writeError(err error) []byte {
 }
 
 func SetupResources(s Store, rss Rss) {
-	usagePage := template.Must(template.ParseFiles("tmpl/usage.html"))
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/usage" {
-			usagePage.Execute(w, "")
+	respond := func(w http.ResponseWriter, data interface{}, err error) {
+		if err != nil {
+			w.Write(writeError(err))
 			return
 		}
-		respond := func(data interface{}, err error) {
-			if err != nil {
-				w.Write(writeError(err))
-				return
-			}
-			bytes, err := json.Marshal(data)
-			if err != nil {
-				w.Write(writeError(err))
-			} else {
-				w.Write(bytes)
-			}
+		bytes, err := json.Marshal(data)
+		if err != nil {
+			w.Write(writeError(err))
+		} else {
+			w.Write(bytes)
 		}
-		urlMatch := func(start string) bool {
-			if len(r.URL.Path) < len(start) {
-				return false
-			}
-			return r.URL.Path[0:len(start)] == start
-		}
+	}
+	usagePage := template.Must(template.ParseFiles("html/usage.html"))
+	usageHandler := func(w http.ResponseWriter, r *http.Request) {
+		usagePage.Execute(w, "")
+	}
+	infoHandler := func(w http.ResponseWriter, r *http.Request) {
+		feeds, err := s.GetAllInfo()
+		respond(w, feeds, err)
+	}
+	feedHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		if r.Method == "GET" {
-			if r.URL.Path == "/feed" || r.URL.Path == "/feed/" {
-				feeds, err := s.GetAllInfo()
-				respond(feeds, err)
-				return
-			} else if urlMatch("/feed/") {
-				id := r.URL.Path[6:]
-				feed, err := s.Get(id)
-				respond(feed, err)
-				return
-			}
+			id := r.URL.Path[6:]
+			feed, err := s.Get(id)
+			respond(w, feed, err)
+			return
 		}
 		if r.Method == "PUT" {
-			if urlMatch("/feed/") {
-				id := r.URL.Path[6:]
-				if id == "" {
-					respond(nil, errors.New("Can not put to empty feed id"))
-					return
-				}
-				feed := Feed{}
-				bytes, err := ioutil.ReadAll(r.Body)
-				if err != nil {
-					respond(nil, err)
-					return
-				}
-				feed.Id = id
-				err = json.Unmarshal(bytes, &feed)
-				if err != nil {
-					respond(nil, err)
-					return
-				}
-				old, err := s.Get(id)
-				if err != nil && err.Error() != "not found" {
-					respond(nil, err)
-					return
-				}
-				if err != nil {
-					old = &feed
-				} else {
-					old.Title = feed.Title
-					old.Url = feed.Url
-					old.Type = feed.Type
-				}
-				err = s.Put(old)
-				respond(ResourceResponse{"Ok", "Updated " + id}, err)
+			id := r.URL.Path[6:]
+			if id == "" {
+				respond(w, nil, errors.New("Can not put to empty feed id"))
 				return
 			}
-		}
-		if r.Method == "POST" {
-			if urlMatch("/feed/") {
-				id := r.URL.Path[6:]
-				if id == "" {
-					respond(nil, errors.New("Can not operate on empty feed id"))
-					return
-				}
-				ind := strings.Index(id, "/")
-				if ind == -1 {
-					respond(nil, errors.New("Can not perform no operation on "+id))
-					return
-				}
-				op := id[ind+1:]
-				id = id[0:ind]
-				if op == "refresh" {
-					err := rss.Fetch(id)
-					respond(ResourceResponse{"Ok", "Refreshed " + id}, err)
-					return
-				}
-				respond(nil, errors.New("Can not perform operation "+op+" on "+id))
+			feed := Feed{}
+			bytes, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				respond(w, nil, err)
 				return
 			}
+			feed.Id = id
+			err = json.Unmarshal(bytes, &feed)
+			if err != nil {
+				respond(w, nil, err)
+				return
+			}
+			old, err := s.Get(id)
+			if err != nil {
+				if len(err.Error()) < 9 || err.Error()[0:9] != "not found" {
+					respond(w, nil, err)
+					return
+				}
+			}
+			if err != nil {
+				old = &feed
+			} else {
+				old.Title = feed.Title
+				old.Url = feed.Url
+				old.Type = feed.Type
+			}
+			err = s.Put(old)
+			respond(w, ResourceResponse{"Ok", "Updated " + id}, err)
+			return
 		}
-		respond(nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
+		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
 	}
-	http.HandleFunc("/", handler)
+	refreshHandler := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			id := r.URL.Path[9:]
+			err := rss.Fetch(id)
+			respond(w, ResourceResponse{"Ok", "Refreshed " + id}, err)
+			return
+		}
+		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
+	}
+	http.HandleFunc("/", usageHandler)
+	http.HandleFunc("/usage", usageHandler)
+	http.HandleFunc("/feed", infoHandler)
+	http.HandleFunc("/feed/", feedHandler)
+	http.HandleFunc("/refresh/", refreshHandler)
 }

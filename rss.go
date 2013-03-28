@@ -88,11 +88,11 @@ func (handler *rsshandler) fetchAll(feedType string) []error {
 
 func (handler *rsshandler) fetch(id string) error {
 	feed, err := handler.store.Get(id)
-	feed.LastError = ""
-	feed.LastFetched = time.Now()
 	if err != nil {
 		return err
 	}
+	feed.LastError = ""
+	feed.LastFetched = time.Now()
 	curr, err := rss.Read(feed.Url)
 	if err != nil {
 		feed.LastError = err.Error()

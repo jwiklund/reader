@@ -192,7 +192,7 @@ func (s *store) getFeed(id string) FeedResponse {
 		return FeedResponse{Error: err}
 	}
 	if feed.Id == "" {
-		return FeedResponse{Error: errors.New("not found")}
+		return FeedResponse{Error: errors.New("not found: " + id)}
 	}
 	stmt, err = s.conn.Prepare("select json from item where id = ?")
 	if err != nil {
