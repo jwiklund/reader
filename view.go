@@ -21,7 +21,9 @@ func respond(w http.ResponseWriter, data interface{}, err error) {
 	if err != nil {
 		w.Write([]byte("{\"Status\": \"Error\", \"Message\": \"" + err.Error() + "\"}"))
 	} else {
+		w.Write([]byte("{\"Status\": \"Ok\", \"Data\": "))
 		w.Write(bytes)
+		w.Write([]byte("}"))
 	}
 }
 

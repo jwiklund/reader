@@ -21,8 +21,11 @@
 		</div>
 	</div>
 	<div class="container" ng-controller="FeedCtrl">
-		<div ng-repeat="feed in feeds">
-			<span id="{{feed.id}}">{{feed.Title}}</span> <a href="{{feed.url}}">link</a> {{feed.type}} Last {{feed.lastFetched}} Last Error {{feed.lastError}}
+		<div>
+			Filter <input type="text" ng-model="query"></input>
+		</div>
+		<div ng-repeat="feed in feeds | filter:query">
+			<span id="{{feed.id}}">{{feed.title}}</span> <a href="{{feed.url}}">link</a> {{feed.type}} Last {{feed.lastFetched}} Last Error {{feed.lastError}}
 		</div>
 	</div>
 </body>
