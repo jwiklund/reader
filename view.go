@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"os"
 )
 
 type ResourceResponse struct {
@@ -24,23 +23,6 @@ func respond(w http.ResponseWriter, data interface{}, err error) {
 	} else {
 		w.Write(bytes)
 	}
-}
-
-func serveFile(fname string) func(http.ResponseWriter, *http.Request) {
-	f := func(w http.ResponseWriter, r *http.Request) {
-		file, err := os.Open(fname)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			return
-		}
-		buf, err := ioutil.ReadAll(file)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			return
-		}
-		w.Write(buf)
-	}
-	return f
 }
 
 func SetupResources(s Store, rss Rss) {
@@ -103,10 +85,14 @@ func SetupResources(s Store, rss Rss) {
 		}
 		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
 	}
-	http.HandleFunc("/usage", serveFile("html/usage.html"))
 	http.HandleFunc("/feed", infoHandler)
 	http.HandleFunc("/feed/", feedHandler)
 	http.HandleFunc("/refresh/", refreshHandler)
-	http.HandleFunc("/", serveFile("html/index.html"))
-	http.Handle("/js/", http.FileServer(http.Dir(".")))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/html/index.html", http.StatusMovedPermanently)
+	})
+	dir := http.FileServer(http.Dir("."))
+	http.Handle("/css/", dir)
+	http.Handle("/js/", dir)
+	http.Handle("/html/", dir)
 }

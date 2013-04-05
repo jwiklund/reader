@@ -1,3 +1,4 @@
+<html lang="eng" ng-app>
 <head>
 	<title>Reader</title>
 	<link href="/css/bootstrap.min.css" rel="stylesheet">
@@ -19,7 +20,13 @@
 			</div>
 		</div>
 	</div>
-
-	<h1>Welcome</h1>
+	<div class="container" ng-controller="FeedCtrl">
+		<div ng-repeat="feed in feeds">
+			<span id="{{feed.id}}">{{feed.Title}}</span> <a href="{{feed.url}}">link</a> {{feed.type}} Last {{feed.lastFetched}} Last Error {{feed.lastError}}
+		</div>
+	</div>
 </body>
+
+<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
+<script type="text/javascript" src="/js/feeds.js"></script>
 </html>
