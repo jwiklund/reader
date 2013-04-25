@@ -1,1 +1,3 @@
 Awesome https://github.com/GoogleChrome/wReader-app
+Rewrite https://code.google.com/p/gorest/
+Access Angular from JS http://stackoverflow.com/questions/10490570/call-angular-js-from-legacy-code
