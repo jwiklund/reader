@@ -1,4 +1,4 @@
-function FeedCtrl($scope, $html) {
+function FeedCtrl($scope, $http) {
 	$scope.showError = false
 
 	function log(msg) {
@@ -9,14 +9,26 @@ function FeedCtrl($scope, $html) {
 
 	function formatItems(items) {
 		result = []
-		for (item in items) {
-			if ('Description' in items[item]) {
-				result.push({ alternative: false, content: items[item].Description })
-			} else if ('Title' in items[item]) {
-				result.push({ alternative: true, text: items[item].Title, url: items[item].Url})
-			} else {
-				result.push({ alternative: true, text: items[item].Id, url: items[item].Url})
+		first = true
+		for (index in items) {
+			var item = items[index]
+			var resultItem = { markClass: "newItem", alternative: false }
+			if (first) {
+				first = false
+				resultItem.markClass = "curItem"
 			}
+			if ('Description' in item) {
+				resultItem.content = item.Description
+			} else if ('Title' in item) {
+				resultItem.alternative = true
+				resultItem.text = item.Title
+				resultItem.url = item.Url
+			} else {
+				resultItem.alternative = true
+				resultItem.text = item.Id
+				resultItem.url = item.Url
+			}
+			result.push(resultItem)
 		}
 		return result
 	}
@@ -26,7 +38,7 @@ function FeedCtrl($scope, $html) {
 		$scope.showError = true
 		$scope.error = "Fetching"
 
-		$html.get('/read').success(function (data) {
+		$http.get('/read').success(function (data) {
 			log("Refresh Status " + data.Status)
 			if (data.Status != "Ok") {
 				$scope.showError = true
@@ -38,6 +50,10 @@ function FeedCtrl($scope, $html) {
 		})
 		$scope.showError = true
 		$scope.error = "Fetching"
+	}
+
+	$scope.handleSpace = function() {
+		console.log("SPACE")
 	}
 
 	$scope.refresh()

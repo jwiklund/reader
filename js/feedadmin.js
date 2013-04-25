@@ -19,7 +19,7 @@ myApp = angular.module("reader", []).directive("contenteditable", function() {
 	}
 })
 
-function FeedAdminCtrl($scope, $html) {
+function FeedAdminCtrl($scope, $http) {
 	$scope.showError = false
 	$scope.showAdd = false
 
@@ -34,7 +34,7 @@ function FeedAdminCtrl($scope, $html) {
 		$scope.showError = true
 		$scope.error = "Fetching"
 
-		$html.get('/feed').success(function (data) {
+		$http.get('/feed').success(function (data) {
 			log("Refresh Status " + data.Status)
 			if (data.Status != "Ok") {
 				$scope.showError = true
@@ -55,9 +55,11 @@ function FeedAdminCtrl($scope, $html) {
 			$scope.showAdd = true
 		}
 	}
-	$scope.addShow = function() {
+	$scope.addFeed = function() {
 		log("Adding")
-		$html.post("/feed/").success(function (data) {
+		var data = JSON.stringify({ Id: $scope.addId, Url: $scope.addUrl })
+		var promise = $http.post("/feed/", data)
+		promise.success(function (data) {
 			log("Add Status " + data.Status)
 			if (data.Status != "Ok") {
 				$scope.showError = true
@@ -73,7 +75,7 @@ function FeedAdminCtrl($scope, $html) {
 	}
 	$scope.refreshFeed = function(feed) {
 		log("Refreshing " + feed.Id)
-		$html.post("/feed/" + feed.Id + "/refresh").success(function (data) {
+		$http.post("/feed/" + feed.Id + "/refresh").success(function (data) {
 			log("Refresh Feed Status " + data.Status)
 			if (data.Status != "Ok") {
 				$scope.showError = true

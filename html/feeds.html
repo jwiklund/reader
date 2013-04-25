@@ -33,14 +33,14 @@
 			</div>
 		</div>
 	</div>
-	<div class="container" ng-controller="FeedAdminCtrl">
+	<div class="container" ng-controller="FeedAdminCtrl" ng-cloak>
 		<div class="line">
 			Filter <span class="input" ng-model="query" contenteditable="true" style="min-width: 200px"></span>
 			<button ng-click="toggleAdd()">Add Feed</button>
 			<button ng-click="refresh()">Refresh</button>
 		</div>
 		<div ng-show="showAdd" class="line">
-			<button ng-click="addShow()">Add</button>
+			<button ng-click="addFeed()">Add</button>
 			<span contenteditable="true" class="input" ng-model="addId">id</span> to
 			<span contenteditable="true" class="input" ng-model="addUrl">url</span>
 		</div>
