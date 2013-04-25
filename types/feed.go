@@ -1,29 +1,9 @@
-package reader
+package types
 
 import (
 	"errors"
 	"strconv"
-	"time"
 )
-
-type Item struct {
-	Id          string
-	Title       string
-	Description string
-	Content     string
-	Type        string
-	Url         string
-}
-
-type Feed struct {
-	Id          string
-	Title       string
-	Type        string
-	Url         string
-	LastFetched time.Time
-	LastError   string
-	Items       []Item
-}
 
 type ItemIdList []string
 

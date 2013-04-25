@@ -1,4 +1,4 @@
-package reader
+package types
 
 import (
 	"testing"

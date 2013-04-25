@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"github.com/jwiklund/reader/types"
 	"strconv"
 	"testing"
 )
@@ -9,7 +10,7 @@ func TestPutGetFeed(t *testing.T) {
 	s := NewStore(":memory:")
 	defer s.Close()
 
-	err := s.Put(&Feed{Url: "http://localhost/", Id: "feed", Title: "Title"})
+	err := s.Put(&types.Feed{Url: "http://localhost/", Id: "feed", Title: "Title"})
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -29,7 +30,7 @@ func TestUpdateFeed(t *testing.T) {
 	s := NewStore(":memory:")
 	defer s.Close()
 
-	feed := &Feed{Url: "http://localhost/", Id: "feed", Title: "Title"}
+	feed := &types.Feed{Url: "http://localhost/", Id: "feed", Title: "Title"}
 	err := s.Put(feed)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -53,14 +54,14 @@ func TestItemsInFeed(t *testing.T) {
 	s := NewStore(":memory:")
 	defer s.Close()
 
-	feed := &Feed{Id: "feed1", Title: "Feed1", Type: "rss1", Url: "http://localhost/1"}
+	feed := &types.Feed{Id: "feed1", Title: "Feed1", Type: "rss1", Url: "http://localhost/1"}
 	t.Log("Original 1 " + feed.String())
 	err := s.Put(feed)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	feed = &Feed{Id: "feed2", Title: "Feed2", Type: "rss2", Url: "http://localhost/2"}
-	feed.AddItem(&Item{Id: "hash", Url: "http://localhost/2/item1"})
+	feed = &types.Feed{Id: "feed2", Title: "Feed2", Type: "rss2", Url: "http://localhost/2"}
+	feed.AddItem(&types.Item{Id: "hash", Url: "http://localhost/2/item1"})
 	t.Log("Original 2 " + feed.String())
 	err = s.Put(feed)
 	if err != nil {
@@ -109,10 +110,10 @@ func TestGetInfo(t *testing.T) {
 	s := NewStore(":memory:")
 	defer s.Close()
 
-	i1 := []Item{Item{Id: "Id1.1"}}
-	i2 := []Item{Item{Id: "Id2.1"}}
-	s.Put(&Feed{Id: "id1", Items: i1})
-	s.Put(&Feed{Id: "id2", Items: i2})
+	i1 := []types.Item{types.Item{Id: "Id1.1"}}
+	i2 := []types.Item{types.Item{Id: "Id2.1"}}
+	s.Put(&types.Feed{Id: "id1", Items: i1})
+	s.Put(&types.Feed{Id: "id2", Items: i2})
 	info, err := s.GetAllInfo()
 	if err != nil {
 		t.Fatal(err.Error())

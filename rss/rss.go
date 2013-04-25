@@ -1,17 +1,13 @@
-package reader
+package rss
 
 import (
+	"github.com/jwiklund/reader/types"
 	rss "github.com/ungerik/go-rss"
+	"html"
 	"time"
 )
 
-type Rss interface {
-	Fetch(id string) error
-	FetchAll() []error
-	Close()
-}
-
-func NewRss(store Store) Rss {
+func NewRss(store types.Store) types.Rss {
 	handler := rsshandler{store: store}
 	handler.FetchChan = make(chan FetchRssRequest, 100)
 	handler.FetchAllChan = make(chan FetchAllRssRequest, 100)
@@ -37,7 +33,7 @@ type rsshandler struct {
 	FetchAllChan chan FetchAllRssRequest
 	CloseChan    chan bool
 
-	store  Store
+	store  types.Store
 	reader func(string) (*rss.Channel, error)
 }
 
@@ -92,14 +88,8 @@ func (handler *rsshandler) fetch(id string) error {
 		return err
 	}
 	feed.LastError = ""
-	feed.LastFetched = time.Now()
-	curr, err := rss.Read(feed.Url)
-	if err != nil {
-		feed.LastError = err.Error()
-		handler.store.Put(feed)
-		return err
-	}
-	items, err := convertToItems(curr)
+	feed.LastFetched = time.Now().Format(types.DateFormat)
+	items, err := Fetch(feed.Url)
 	if err != nil {
 		feed.LastError = err.Error()
 		handler.store.Put(feed)
@@ -110,15 +100,29 @@ func (handler *rsshandler) fetch(id string) error {
 	return err
 }
 
-func convertToItems(channel *rss.Channel) ([]Item, error) {
-	items := make([]Item, len(channel.Item))
+func Fetch(url string) ([]types.Item, error) {
+	curr, err := rss.Read(url)
+	if err != nil {
+		return nil, err
+	}
+	return convertToItems(curr)
+}
+
+func convertToItems(channel *rss.Channel) ([]types.Item, error) {
+	items := make([]types.Item, len(channel.Item))
 	for i := 0; i < len(channel.Item); i++ {
 		from := channel.Item[i]
-		to := Item{}
+		to := types.Item{}
 		to.Id = from.GUID
 		to.Title = from.Title
-		to.Description = from.Description
+		to.Description = html.UnescapeString(from.Description)
 		to.Content = from.Content
+		time, err := from.PubDate.Parse()
+		if err != nil {
+			to.Published = string(from.PubDate)
+		} else {
+			to.Published = time.Format(types.DateFormat)
+		}
 		if from.Enclosure.URL != "" {
 			to.Type = from.Enclosure.Type
 			to.Url = from.Enclosure.URL

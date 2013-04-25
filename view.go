@@ -3,6 +3,7 @@ package reader
 import (
 	"encoding/json"
 	"errors"
+	"github.com/jwiklund/reader/types"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -37,8 +38,8 @@ func respondOk(w http.ResponseWriter, r *ResourceResponse) {
 	}
 }
 
-func createFeed(s Store, w http.ResponseWriter, r *http.Request) {
-	feed := Feed{}
+func createFeed(s types.Store, w http.ResponseWriter, r *http.Request) {
+	feed := types.Feed{}
 	bytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		respond(w, nil, err)
@@ -67,7 +68,7 @@ func createFeed(s Store, w http.ResponseWriter, r *http.Request) {
 	respondOk(w, &ResourceResponse{"Ok", "Created " + feed.Id})
 }
 
-func refreshFeed(id string, rss Rss, w http.ResponseWriter) {
+func refreshFeed(id string, rss types.Rss, w http.ResponseWriter) {
 	err := rss.Fetch(id)
 	if err == nil {
 		respondOk(w, &ResourceResponse{"Ok", "Updated " + id})
@@ -87,7 +88,7 @@ func feedOperation(path string) (string, string) {
 	return path[ind+1:], path[0:ind]
 }
 
-func SetupResources(s Store, rss Rss) {
+func SetupResources(s types.Store, rss types.Rss) {
 	infoHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			feeds, err := s.GetAllInfo()
@@ -120,7 +121,7 @@ func SetupResources(s Store, rss Rss) {
 				respond(w, nil, errors.New("Can not put to empty feed id"))
 				return
 			}
-			feed := Feed{}
+			feed := types.Feed{}
 			bytes, err := ioutil.ReadAll(r.Body)
 			if err != nil {
 				respond(w, nil, err)
@@ -156,7 +157,20 @@ func SetupResources(s Store, rss Rss) {
 		}
 		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
 	}
+	readHandler := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			items, err := s.GetByUser("jwiklund")
+			if err != nil {
+				respond(w, nil, err)
+				return
+			}
+			respond(w, items, nil)
+			return
+		}
+		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
+	}
 	http.HandleFunc("/feed", infoHandler)
+	http.HandleFunc("/read", readHandler)
 	http.HandleFunc("/feed/", feedHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/html/index.html", http.StatusMovedPermanently)

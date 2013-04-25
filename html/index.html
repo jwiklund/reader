@@ -6,6 +6,12 @@
 		body {
 			padding-top: 50px; /* 60px to make the container go all the way to the bottom of the topbar */
 		}
+		.line {
+			margin-bottom: 5px;
+		}
+		.item {
+			border: 1px solid #ccc;
+		}
 		.error {
 			color: red;
 		}
@@ -27,6 +33,10 @@
 	</div>
 
 	<div class="container" ng-controller="FeedCtrl">
+		<div class="item line" ng-repeat="item in items">
+			<span ng-hide="item.alternative" ng-bind-html-unsafe="item.content"></span>
+			<a ng-show="item.alternative" href="{{item.url}}">{{item.text}}</a>
+		</div>
 		<span ng-show="showError" class="error">{{error}}</span>
 	</div>
 </body>

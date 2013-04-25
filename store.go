@@ -4,19 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	sqlite "github.com/gwenn/gosqlite"
+	"github.com/jwiklund/reader/types"
 )
 
-type Store interface {
-	Get(id string) (*Feed, error)
-	GetByType(feedType string) ([]string, error)
-	GetAllInfo() ([]Feed, error)
-	Put(feed *Feed) error
-	Close()
-}
-
-func NewStore(path string) Store {
+func NewStore(path string) types.Store {
 	store := store{}
 	store.GetFeedChan = make(chan GetFeedRequest, 100)
+	store.GetUserChan = make(chan GetUserRequest, 100)
 	store.GetTypeChan = make(chan GetTypeRequest, 100)
 	store.GetInfoChan = make(chan GetInfoRequest, 100)
 	store.PutFeedChan = make(chan PutFeedRequest, 100)
@@ -26,18 +20,25 @@ func NewStore(path string) Store {
 	return &store
 }
 
-func (s *store) Put(feed *Feed) error {
+func (s *store) Put(feed *types.Feed) error {
 	p := PutFeedRequest{*feed, make(chan error)}
 	s.PutFeedChan <- p
 	r := <-p.Response
 	return r
 }
 
-func (s *store) Get(id string) (*Feed, error) {
+func (s *store) Get(id string) (*types.Feed, error) {
 	g := GetFeedRequest{id, make(chan FeedResponse)}
 	s.GetFeedChan <- g
 	r := <-g.Response
 	return r.Feed, r.Error
+}
+
+func (s *store) GetByUser(user string) ([]types.Item, error) {
+	g := GetUserRequest{user, make(chan UserResponse)}
+	s.GetUserChan <- g
+	r := <-g.Response
+	return r.Item, r.Error
 }
 
 func (s *store) GetByType(feedType string) ([]string, error) {
@@ -47,7 +48,7 @@ func (s *store) GetByType(feedType string) ([]string, error) {
 	return r.Id, r.Error
 }
 
-func (s *store) GetAllInfo() ([]Feed, error) {
+func (s *store) GetAllInfo() ([]types.Feed, error) {
 	g := GetInfoRequest{make(chan InfoResponse)}
 	s.GetInfoChan <- g
 	r := <-g.Response
@@ -60,6 +61,7 @@ func (s *store) Close() {
 
 type store struct {
 	GetFeedChan chan GetFeedRequest
+	GetUserChan chan GetUserRequest
 	GetTypeChan chan GetTypeRequest
 	GetInfoChan chan GetInfoRequest
 	PutFeedChan chan PutFeedRequest
@@ -70,13 +72,23 @@ type store struct {
 }
 
 type FeedResponse struct {
-	Feed  *Feed
+	Feed  *types.Feed
 	Error error
 }
 
 type GetFeedRequest struct {
 	Id       string
 	Response chan FeedResponse
+}
+
+type UserResponse struct {
+	Item  []types.Item
+	Error error
+}
+
+type GetUserRequest struct {
+	User     string
+	Response chan UserResponse
 }
 
 type TypeResponse struct {
@@ -90,7 +102,7 @@ type GetTypeRequest struct {
 }
 
 type InfoResponse struct {
-	Feed  []Feed
+	Feed  []types.Feed
 	Error error
 }
 
@@ -99,7 +111,7 @@ type GetInfoRequest struct {
 }
 
 type PutFeedRequest struct {
-	Feed     Feed
+	Feed     types.Feed
 	Response chan error
 }
 
@@ -124,6 +136,8 @@ func (s *store) serve() error {
 			c.Response <- s.putFeed(c.Feed)
 		case r := <-s.GetFeedChan:
 			r.Response <- s.getFeed(r.Id)
+		case c := <-s.GetUserChan:
+			c.Response <- s.getUser(c.User)
 		case c := <-s.GetTypeChan:
 			c.Response <- s.getType(c.Type)
 		case c := <-s.GetInfoChan:
@@ -131,6 +145,7 @@ func (s *store) serve() error {
 		case <-s.CloseChan:
 			close(s.PutFeedChan)
 			close(s.GetFeedChan)
+			close(s.GetUserChan)
 			close(s.GetTypeChan)
 			close(s.CloseChan)
 			return nil
@@ -139,9 +154,9 @@ func (s *store) serve() error {
 	return nil
 }
 
-func (s *store) putFeed(feed Feed) error {
+func (s *store) putFeed(feed types.Feed) error {
 	items := feed.Items
-	feed.Items = []Item{}
+	feed.Items = []types.Item{}
 	info_bytes, err := json.Marshal(feed)
 	if err != nil {
 		return err
@@ -181,7 +196,7 @@ func (s *store) getFeed(id string) FeedResponse {
 	if err != nil {
 		return FeedResponse{Error: err}
 	}
-	feed := Feed{Id: ""}
+	feed := types.Feed{Id: ""}
 	err = stmt.Select(func(s *sqlite.Stmt) error {
 		bytes := []byte{}
 		s.Scan(&bytes)
@@ -210,6 +225,32 @@ func (s *store) getFeed(id string) FeedResponse {
 	return FeedResponse{&feed, nil}
 }
 
+func (s *store) getUser(user string) UserResponse {
+	stmt, err := s.conn.Prepare("select json from item")
+	if err != nil {
+		return UserResponse{Error: err}
+	}
+	defer stmt.Finalize()
+	items := []types.Item{}
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+		bytes := []byte{}
+		s.Scan(&bytes)
+		tmp := []types.Item{}
+		err := json.Unmarshal(bytes, &tmp)
+		if err != nil {
+			return err
+		}
+		for _, v := range tmp {
+			items = append(items, v)
+		}
+		return nil
+	})
+	if err != nil {
+		return UserResponse{Error: err}
+	}
+	return UserResponse{items, nil}
+}
+
 func (s *store) getType(feedType string) TypeResponse {
 	stmt, err := s.conn.Prepare("select id from feed where type = ?")
 	if err != nil {
@@ -234,8 +275,8 @@ func (s *store) getInfo() InfoResponse {
 	if err != nil {
 		return InfoResponse{Error: err}
 	}
-	f := Feed{}
-	feed := []Feed{}
+	f := types.Feed{}
+	feed := []types.Feed{}
 	bytes := []byte{}
 	err = stmt.Select(func(s *sqlite.Stmt) error {
 		s.Scan(&bytes)
