@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 type ResourceResponse struct {
@@ -27,10 +28,73 @@ func respond(w http.ResponseWriter, data interface{}, err error) {
 	}
 }
 
+func respondOk(w http.ResponseWriter, r *ResourceResponse) {
+	bytes, err := json.Marshal(r)
+	if err != nil {
+		w.Write([]byte("{\"Status\": \"Error\", \"Message\": \"" + err.Error() + "\"}"))
+	} else {
+		w.Write(bytes)
+	}
+}
+
+func createFeed(s Store, w http.ResponseWriter, r *http.Request) {
+	feed := Feed{}
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		respond(w, nil, err)
+		return
+	}
+	err = json.Unmarshal(bytes, &feed)
+	if err != nil {
+		respond(w, nil, err)
+		return
+	}
+	err = feed.ValidateNew()
+	if err != nil {
+		respond(w, nil, err)
+		return
+	}
+	_, err = s.Get(feed.Id)
+	if err == nil {
+		respond(w, nil, errors.New("Feed already exists "+feed.Id))
+		return
+	}
+	err = s.Put(&feed)
+	if err != nil {
+		respond(w, nil, err)
+		return
+	}
+	respondOk(w, &ResourceResponse{"Ok", "Created " + feed.Id})
+}
+
+func refreshFeed(id string, rss Rss, w http.ResponseWriter) {
+	err := rss.Fetch(id)
+	if err == nil {
+		respondOk(w, &ResourceResponse{"Ok", "Updated " + id})
+	} else {
+		respond(w, nil, err)
+	}
+}
+
+func feedOperation(path string) (string, string) {
+	if path == "" {
+		return "create", ""
+	}
+	ind := strings.Index(path, "/")
+	if ind == -1 {
+		return "Unknown", path
+	}
+	return path[ind+1:], path[0:ind]
+}
+
 func SetupResources(s Store, rss Rss) {
 	infoHandler := func(w http.ResponseWriter, r *http.Request) {
-		feeds, err := s.GetAllInfo()
-		respond(w, feeds, err)
+		if r.Method == "GET" {
+			feeds, err := s.GetAllInfo()
+			respond(w, feeds, err)
+			return
+		}
+		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
 	}
 	feedHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
@@ -39,6 +103,16 @@ func SetupResources(s Store, rss Rss) {
 			feed, err := s.Get(id)
 			respond(w, feed, err)
 			return
+		}
+		if r.Method == "POST" {
+			op, id := feedOperation(r.URL.Path[6:])
+			if op == "create" {
+				createFeed(s, w, r)
+				return
+			} else if op == "refresh" {
+				refreshFeed(id, rss, w)
+				return
+			}
 		}
 		if r.Method == "PUT" {
 			id := r.URL.Path[6:]
@@ -73,23 +147,17 @@ func SetupResources(s Store, rss Rss) {
 				old.Type = feed.Type
 			}
 			err = s.Put(old)
-			respond(w, ResourceResponse{"Ok", "Updated " + id}, err)
-			return
-		}
-		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
-	}
-	refreshHandler := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" {
-			id := r.URL.Path[9:]
-			err := rss.Fetch(id)
-			respond(w, ResourceResponse{"Ok", "Refreshed " + id}, err)
+			if err != nil {
+				respond(w, nil, err)
+				return
+			}
+			respondOk(w, &ResourceResponse{"Ok", "Updated " + id})
 			return
 		}
 		respond(w, nil, errors.New("Method not allowed "+r.Method+" "+r.URL.Path))
 	}
 	http.HandleFunc("/feed", infoHandler)
 	http.HandleFunc("/feed/", feedHandler)
-	http.HandleFunc("/refresh/", refreshHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/html/index.html", http.StatusMovedPermanently)
 	})

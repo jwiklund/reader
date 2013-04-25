@@ -1,12 +1,25 @@
-<html lang="eng" ng-app>
+<html lang="eng" ng-app="reader">
 <head>
 	<title>Reader</title>
 	<link href="/css/bootstrap.min.css" rel="stylesheet">
 	<style>
-      body {
-        padding-top: 50px; /* 60px to make the container go all the way to the bottom of the topbar */
-      }
+		body {
+			padding-top: 50px; /* 60px to make the container go all the way to the bottom of the topbar */
+		}
+		.input {
+			border: 1px solid #ccc;
+			display: inline-block;
+			min-width: 100px;
+		}
+		.line {
+			margin-bottom: 5px;
+		}
+		.error {
+			color: red;
+		}
     </style>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
+	<script type="text/javascript" src="/js/feedadmin.js"></script>
 </head>
 <body>
 	<div class="navbar navbar-fixed-top">
@@ -20,16 +33,24 @@
 			</div>
 		</div>
 	</div>
-	<div class="container" ng-controller="FeedCtrl">
-		<div>
-			Filter <input type="text" ng-model="query"></input>
+	<div class="container" ng-controller="FeedAdminCtrl">
+		<div class="line">
+			Filter <span class="input" ng-model="query" contenteditable="true" style="min-width: 200px"></span>
+			<button ng-click="toggleAdd()">Add Feed</button>
+			<button ng-click="refresh()">Refresh</button>
+		</div>
+		<div ng-show="showAdd" class="line">
+			<button ng-click="addShow()">Add</button>
+			<span contenteditable="true" class="input" ng-model="addId">id</span> to
+			<span contenteditable="true" class="input" ng-model="addUrl">url</span>
 		</div>
 		<div ng-repeat="feed in feeds | filter:query">
-			<span id="{{feed.id}}">{{feed.title}}</span> <a href="{{feed.url}}">link</a> {{feed.type}} Last {{feed.lastFetched}} Last Error {{feed.lastError}}
+			<span id="{{feed.Id}}">{{feed.Title}}</span>
+			<a href="{{feed.Url}}">link</a>
+			{{feed.Type}} <!-- Last {{feed.LastFetched}} Last Error {{feed.LastError}} -->
+			<a href="#" ng-click="refreshFeed(feed)">refresh</a>
 		</div>
+		<span ng-show="showError" class="error">{{error}}</span>
 	</div>
 </body>
-
-<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
-<script type="text/javascript" src="/js/feeds.js"></script>
 </html>

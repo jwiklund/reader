@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"errors"
 	"strconv"
 	"time"
 )
@@ -48,6 +49,22 @@ func (f *Feed) ItemIds() ItemIdList {
 		res[i] = f.Items[i].Id
 	}
 	return ItemIdList(res)
+}
+
+func (f *Feed) ValidateNew() error {
+	if f.Id == "" || f.Id == "id" {
+		return errors.New("Id is required")
+	}
+	if f.Url == "" || f.Url == "url" {
+		return errors.New("Url is required")
+	}
+	if f.Title == "" {
+		f.Title = f.Id
+	}
+	if f.Type == "" {
+		f.Type = "rss"
+	}
+	return nil
 }
 
 func (f ItemIdList) String() string {

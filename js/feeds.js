@@ -1,10 +1,18 @@
 function FeedCtrl($scope, $html) {
-	$html.get('/feed').success(function (data) {
-		if (data.Status != "Ok") {
-			$scope.error = data.Message
-		} else {
-			$scope.feeds = data.Data
+	$scope.showError = false
+
+	function log(msg) {
+		if (console.log) {
+			console.log(msg)
 		}
-	})
+	}
+
+	$scope.refresh = function() {
+		log("Refreshing")
+		$scope.showError = true
+		$scope.error = "Fetching"
+	}
+
+	$scope.refresh()
 }
 FeedCtrl.$inject = ['$scope', '$http']

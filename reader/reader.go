@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/jwiklund/reader"
+	"log"
 	"net/http"
 )
 
@@ -13,7 +14,7 @@ func run() {
 	defer r.Close()
 	reader.SetupResources(s, r)
 	fmt.Println("Start listening on :8080")
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func main() {

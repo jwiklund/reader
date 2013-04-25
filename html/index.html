@@ -1,11 +1,17 @@
+<html lang="eng" ng-app>
 <head>
 	<title>Reader</title>
 	<link href="/css/bootstrap.min.css" rel="stylesheet">
 	<style>
-      body {
-        padding-top: 50px; /* 60px to make the container go all the way to the bottom of the topbar */
-      }
+		body {
+			padding-top: 50px; /* 60px to make the container go all the way to the bottom of the topbar */
+		}
+		.error {
+			color: red;
+		}
     </style>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
+	<script type="text/javascript" src="/js/feeds.js"></script>
 </head>
 <body>
 	<div class="navbar navbar-fixed-top">
@@ -20,6 +26,8 @@
 		</div>
 	</div>
 
-	<h1>Welcome</h1>
+	<div class="container" ng-controller="FeedCtrl">
+		<span ng-show="showError" class="error">{{error}}</span>
+	</div>
 </body>
 </html>
