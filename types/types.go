@@ -24,12 +24,28 @@ type Feed struct {
 	Items       []Item
 }
 
+type UserFeed struct {
+	FeedId     string
+	ReadItemId string
+}
+
+type UserFeedGroup struct {
+	GroupName string
+	Feeds     []UserFeed
+}
+
+type User struct {
+	Id    string
+	Feeds []UserFeedGroup
+}
+
 type Store interface {
-	Get(id string) (*Feed, error)
-	GetByUser(user string) ([]Item, error)
-	GetByType(feedType string) ([]string, error)
-	GetAllInfo() ([]Feed, error)
-	Put(feed *Feed) error
+	GetAllFeedsInfo() ([]Feed, error)
+	GetFeed(id string) (*Feed, error)
+	GetFeedByUser(user, group string) ([]Item, error)
+	GetFeedByType(feedType string) ([]string, error)
+	PutFeed(feed *Feed) error
+	GetUser(user string) (*User, error)
 	Close()
 }
 
