@@ -15,7 +15,7 @@ func main() {
 	r := reader.NewRss(s)
 	defer r.Close()
 
-	restful.Add(NewFeedService(service{s, r}))
+	registerFeedService(service{s, r})
 
 	config := swagger.Config{
 		WebServicesUrl:  "http://localhost:8080",
@@ -32,6 +32,11 @@ func main() {
 type service struct {
 	store types.Store
 	rss   types.Rss
+}
+
+type Status struct {
+	Status  string
+	Message string
 }
 
 func (s *service) getFeeds(request *restful.Request, response *restful.Response) {
@@ -52,17 +57,35 @@ func (s *service) getFeed(request *restful.Request, response *restful.Response) 
 	}
 }
 
-func NewFeedService(s service) *restful.WebService {
+func (s *service) refreshFeed(request *restful.Request, response *restful.Response) {
+	err := s.rss.Fetch(request.PathParameter("feed-id"))
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+	} else {
+		response.WriteEntity(Status{"ok", "feed refreshed"})
+	}
+}
+
+func registerFeedService(s service) {
 	ws := new(restful.WebService)
-	ws.Path("/feed").
+	ws.Path("/feeds").
 		Consumes(restful.MIME_JSON, restful.MIME_XML).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 	ws.Route(ws.GET("/").To(func(req *restful.Request, res *restful.Response) { s.getFeeds(req, res) }).
 		Doc("get all feeds").
-		Writes(make([]types.Feed, 1, 1)))
+		Writes(types.Feed{}))
+	restful.Add(ws)
+	ws = new(restful.WebService)
+	ws.Path("/feed").
+		Consumes(restful.MIME_JSON, restful.MIME_XML).
+		Produces(restful.MIME_JSON, restful.MIME_XML)
 	ws.Route(ws.GET("/{feed-id}").To(func(req *restful.Request, res *restful.Response) { s.getFeed(req, res) }).
 		Doc("get a feed").
 		Param(ws.PathParameter("feed-id", "identifier of the feed").DataType("string")).
 		Writes(types.Feed{}))
-	return ws
+	ws.Route(ws.POST("/refresh/{feed-id}").To(func(req *restful.Request, res *restful.Response) { s.refreshFeed(req, res) }).
+		Doc("refresh a feed").
+		Param(ws.PathParameter("feed-id", "identifier of the feed").DataType("string")).
+		Writes(Status{}))
+	restful.Add(ws)
 }
