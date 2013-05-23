@@ -38,14 +38,14 @@ function FeedCtrl($scope, $http) {
 		$scope.showError = true
 		$scope.error = "Fetching"
 
-		$http.get('/read').success(function (data) {
+		$http.get('/feed/user/jwiklund/all').success(function (data) {
 			log("Refresh Status " + data.Status)
-			if (data.Status != "Ok") {
+			if (data.Status != "ok") {
 				$scope.showError = true
-				$scope.error = data.Status
+				$scope.error = data.Message
 			} else {
 				$scope.showError = false
-				$scope.items = formatItems(data.Data)
+				$scope.items = formatItems(data.Items)
 			}
 		})
 		$scope.showError = true

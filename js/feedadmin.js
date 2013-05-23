@@ -36,12 +36,12 @@ function FeedAdminCtrl($scope, $http) {
 
 		$http.get('/feed').success(function (data) {
 			log("Refresh Status " + data.Status)
-			if (data.Status != "Ok") {
+			if (data.Status != "ok") {
 				$scope.showError = true
 				$scope.error = data.Message
 			} else {
 				$scope.showError = false
-				$scope.feeds = data.Data
+				$scope.feeds = data.Feeds
 			}
 		})	
 	}
@@ -61,7 +61,7 @@ function FeedAdminCtrl($scope, $http) {
 		var promise = $http.post("/feed/", data)
 		promise.success(function (data) {
 			log("Add Status " + data.Status)
-			if (data.Status != "Ok") {
+			if (data.Status != "ok") {
 				$scope.showError = true
 				$scope.error = data.Message
 			} else {
@@ -75,9 +75,9 @@ function FeedAdminCtrl($scope, $http) {
 	}
 	$scope.refreshFeed = function(feed) {
 		log("Refreshing " + feed.Id)
-		$http.post("/feed/" + feed.Id + "/refresh").success(function (data) {
+		$http.post("/feed/refresh/" + feed.Id).success(function (data) {
 			log("Refresh Feed Status " + data.Status)
-			if (data.Status != "Ok") {
+			if (data.Status != "ok") {
 				$scope.showError = true
 				$scope.error = data.Message
 			} else {
