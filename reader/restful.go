@@ -145,7 +145,7 @@ func registerFeedService(s service) {
 
 func registerStaticFiles() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/html/index.html", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/html/", http.StatusMovedPermanently)
 	})
 	dir := http.FileServer(http.Dir("."))
 	http.Handle("/css/", dir)
