@@ -1,4 +1,38 @@
-function FeedCtrl($scope, $http) {
+var module = angular.module('reader', []);
+
+/**
+ * Directive for binding keyboard shortcuts.
+ *
+ * When a key press matches one of the key bindings, the associated expression is executed.
+ */
+module.directive('wKeydown', function() {
+  return function(scope, elm, attr) {
+    elm.bind('keydown', function(e) {
+      switch (e.keyCode) {
+        case 32: // Space
+          e.preventDefault();
+          return scope.$apply(attr.wSpace);
+      }
+    });
+  };
+});
+
+/**
+ * Service that is in charge of scrolling in the app.
+ */
+module.factory('scroll', function($timeout) {
+	return {
+		toNext: function() {
+			var cur = $('.item.curItem')
+			$('body').scrollTop(cur.offset().top + cur.height() - 60)
+		},
+		toTop: function() {
+			$('body').scrollTop(0)
+		}
+	}
+})
+
+function FeedCtrl($scope, $http, scroll) {
 	$scope.showError = false
 
 	function log(msg) {
@@ -46,6 +80,8 @@ function FeedCtrl($scope, $http) {
 			} else {
 				$scope.showError = false
 				$scope.items = formatItems(data.Items)
+				$scope.current = 0
+				scroll.toTop()
 			}
 		})
 		$scope.showError = true
@@ -53,9 +89,14 @@ function FeedCtrl($scope, $http) {
 	}
 
 	$scope.handleSpace = function() {
-		console.log("SPACE")
+		if ($scope.items && $scope.current < $scope.items.length - 1) {
+			scroll.toNext()
+			$scope.items[$scope.current].markClass = ""
+			$scope.items[$scope.current + 1].markClass = "curItem"
+			$scope.current = $scope.current + 1
+		}
 	}
 
 	$scope.refresh()
 }
-FeedCtrl.$inject = ['$scope', '$http']
+FeedCtrl.$inject = ['$scope', '$http', 'scroll']
