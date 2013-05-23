@@ -76,7 +76,8 @@ func (f ItemIdList) Equals(ids []string) bool {
 
 func (f *Feed) AddNewItems(items []Item) {
 	old := f.ItemIdMap()
-	for i := 0; i < len(items); i++ {
+
+	for i := len(items) - 1; i >= 0; i-- {
 		prev, ok := old[items[i].Id]
 		if ok {
 			*prev = items[i]
