@@ -1,2 +1,4 @@
 Awesome https://github.com/GoogleChrome/wReader-app
 Access Angular from JS http://stackoverflow.com/questions/10490570/call-angular-js-from-legacy-code
+
+Rewrite go communication, examples https://code.google.com/p/go/source/browse/?repo=talks#hg%2F2013%2Fadvconc%2Frealmain
