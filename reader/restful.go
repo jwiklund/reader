@@ -121,22 +121,22 @@ func registerFeedService(s service) {
 	ws.Path("/feed").
 		Consumes(restful.MIME_JSON, restful.MIME_XML).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
-	ws.Route(ws.GET("/").To(func(req *restful.Request, res *restful.Response) { s.getFeeds(req, res) }).
+	ws.Route(ws.GET("/").To(s.getFeeds).
 		Doc("get all feeds").
 		Writes(Feeds{}))
-	ws.Route(ws.GET("/user/{user-id}/all").To(func(req *restful.Request, res *restful.Response) { s.getAllUserItems(req, res) }).
+	ws.Route(ws.GET("/user/{user-id}/all").To(s.getAllUserItems).
 		Doc("get all unread items for user").
 		Param(ws.PathParameter("user-id", "the user id").DataType("string")).
 		Writes(Feeds{}))
-	ws.Route(ws.GET("/{feed-id}").To(func(req *restful.Request, res *restful.Response) { s.getFeed(req, res) }).
+	ws.Route(ws.GET("/{feed-id}").To(s.getFeed).
 		Doc("get a feed").
 		Param(ws.PathParameter("feed-id", "identifier of the feed").DataType("string")).
 		Writes(Feed{}))
-	ws.Route(ws.POST("/").To(func(req *restful.Request, res *restful.Response) { s.createFeed(req, res) }).
+	ws.Route(ws.POST("/").To(s.createFeed).
 		Doc("create a feed").
 		Param(ws.BodyParameter("feed", "the feed").DataType("types.Feed")).
 		Writes(Status{}))
-	ws.Route(ws.POST("/refresh/{feed-id}").To(func(req *restful.Request, res *restful.Response) { s.refreshFeed(req, res) }).
+	ws.Route(ws.POST("/refresh/{feed-id}").To(s.refreshFeed).
 		Doc("refresh a feed").
 		Param(ws.PathParameter("feed-id", "identifier of the feed").DataType("string")).
 		Writes(Status{}))
