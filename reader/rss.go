@@ -1,4 +1,4 @@
-package rss
+package reader
 
 import (
 	"github.com/jwiklund/reader/types"
@@ -71,7 +71,7 @@ func (handler *rsshandler) serve() error {
 }
 
 func (handler *rsshandler) fetchAll(feedType string) []error {
-	ids, err := handler.store.GetByType(feedType)
+	ids, err := handler.store.GetFeedByType(feedType)
 	if err != nil {
 		return []error{err}
 	}
@@ -83,24 +83,24 @@ func (handler *rsshandler) fetchAll(feedType string) []error {
 }
 
 func (handler *rsshandler) fetch(id string) error {
-	feed, err := handler.store.Get(id)
+	feed, err := handler.store.GetFeed(id)
 	if err != nil {
 		return err
 	}
 	feed.LastError = ""
 	feed.LastFetched = time.Now().Format(types.DateFormat)
-	items, err := Fetch(feed.Url)
+	items, err := FetchRss(feed.Url)
 	if err != nil {
 		feed.LastError = err.Error()
-		handler.store.Put(feed)
+		handler.store.PutFeed(feed)
 		return err
 	}
 	feed.AddNewItems(items)
-	err = handler.store.Put(feed)
+	err = handler.store.PutFeed(feed)
 	return err
 }
 
-func Fetch(url string) ([]types.Item, error) {
+func FetchRss(url string) ([]types.Item, error) {
 	curr, err := rss.Read(url)
 	if err != nil {
 		return nil, err

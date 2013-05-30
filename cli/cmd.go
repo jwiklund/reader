@@ -3,8 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/jwiklund/reader"
-	"github.com/jwiklund/reader/rss"
+	"github.com/jwiklund/reader/reader"
 )
 
 func main() {
@@ -12,15 +11,15 @@ func main() {
 	var feedName = flag.String("feed", "xkcd", "the feed")
 	flag.Parse()
 
-	store := reader.NewStore("data")
-	defer store.Close()
-	feed, err := store.Get(*feedName)
+	r := reader.NewReader("data")
+	defer r.Close()
+	feed, err := r.GetStore().GetFeed(*feedName)
 	if err != nil {
-		fmt.Println("Could not fetch " + feed.Id + " due to " + err.Error())
+		fmt.Println("Could not fetch " + *feedName + " due to " + err.Error())
 		return
 	}
 	if *cmd == "fetch-rss" {
-		items, err := rss.Fetch(feed.Url)
+		items, err := reader.FetchRss(feed.Url)
 		if err != nil {
 			fmt.Println("Could not fetch " + feed.Url + " due to " + err.Error())
 			return
@@ -37,9 +36,7 @@ func main() {
 		}
 		return
 	}
-	rss := reader.NewRss(store)
-	defer store.Close()
 	if *cmd == "update-rss" {
-		rss.Fetch(*feedName)
+		r.GetRss().Fetch(*feedName)
 	}
 }

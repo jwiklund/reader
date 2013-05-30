@@ -54,3 +54,9 @@ type Rss interface {
 	FetchAll() []error
 	Close()
 }
+
+type Reader interface {
+	GetStore() Store
+	GetRss() Rss
+	Close()
+}

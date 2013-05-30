@@ -20,35 +20,39 @@ func NewStore(path string) types.Store {
 	return &store
 }
 
-func (s *store) Put(feed *types.Feed) error {
+func (s *store) PutFeed(feed *types.Feed) error {
 	p := PutFeedRequest{*feed, make(chan error)}
 	s.PutFeedChan <- p
 	r := <-p.Response
 	return r
 }
 
-func (s *store) Get(id string) (*types.Feed, error) {
+func (s *store) GetFeed(id string) (*types.Feed, error) {
 	g := GetFeedRequest{id, make(chan FeedResponse)}
 	s.GetFeedChan <- g
 	r := <-g.Response
 	return r.Feed, r.Error
 }
 
-func (s *store) GetByUser(user string) ([]types.Item, error) {
+func (s *store) GetFeedByUser(user, group string) ([]types.Item, error) {
 	g := GetUserRequest{user, make(chan UserResponse)}
 	s.GetUserChan <- g
 	r := <-g.Response
 	return r.Item, r.Error
 }
 
-func (s *store) GetByType(feedType string) ([]string, error) {
+func (s *store) GetUser(user string) (*types.User, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (s *store) GetFeedByType(feedType string) ([]string, error) {
 	g := GetTypeRequest{feedType, make(chan TypeResponse)}
 	s.GetTypeChan <- g
 	r := <-g.Response
 	return r.Id, r.Error
 }
 
-func (s *store) GetAllInfo() ([]types.Feed, error) {
+func (s *store) GetAllFeedsInfo() ([]types.Feed, error) {
 	g := GetInfoRequest{make(chan InfoResponse)}
 	s.GetInfoChan <- g
 	r := <-g.Response

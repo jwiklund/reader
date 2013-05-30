@@ -3,20 +3,18 @@ package main
 import (
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
-	"github.com/jwiklund/reader"
+	"github.com/jwiklund/reader/reader"
 	"github.com/jwiklund/reader/types"
 	"log"
 	"net/http"
 )
 
 func main() {
-	s := reader.NewStore("data")
-	defer s.Close()
-	r := reader.NewRss(s)
+	r := reader.NewReader("data")
 	defer r.Close()
 
 	registerStaticFiles()
-	registerFeedService(service{s, r})
+	registerFeedService(service{r})
 
 	config := swagger.Config{
 		WebServicesUrl:  "http://localhost:8080",
@@ -31,8 +29,7 @@ func main() {
 }
 
 type service struct {
-	store types.Store
-	rss   types.Rss
+	reader types.Reader
 }
 
 type Status struct {
@@ -56,7 +53,7 @@ type Feed struct {
 }
 
 func (s *service) getFeeds(request *restful.Request, response *restful.Response) {
-	feeds, err := s.store.GetAllInfo()
+	feeds, err := s.reader.GetStore().GetAllFeedsInfo()
 	if err != nil {
 		response.WriteEntity(Status{"fail", err.Error()})
 	} else {
@@ -65,7 +62,7 @@ func (s *service) getFeeds(request *restful.Request, response *restful.Response)
 }
 
 func (s *service) getAllUserItems(request *restful.Request, response *restful.Response) {
-	items, err := s.store.GetByUser(request.PathParameter(("user-id")))
+	items, err := s.reader.GetStore().GetFeedByUser(request.PathParameter(("user-id")), "")
 	if err != nil {
 		response.WriteEntity(Status{"fail", err.Error()})
 	} else {
@@ -74,7 +71,7 @@ func (s *service) getAllUserItems(request *restful.Request, response *restful.Re
 }
 
 func (s *service) getFeed(request *restful.Request, response *restful.Response) {
-	feed, err := s.store.Get(request.PathParameter("feed-id"))
+	feed, err := s.reader.GetStore().GetFeed(request.PathParameter("feed-id"))
 	if err != nil {
 		response.WriteEntity(Status{"fail", err.Error()})
 	} else {
@@ -94,12 +91,12 @@ func (s *service) createFeed(request *restful.Request, response *restful.Respons
 		response.WriteEntity(Status{"fail", "Could not validate Feed: " + err.Error()})
 		return
 	}
-	_, err = s.store.Get(feed.Id)
+	_, err = s.reader.GetStore().GetFeed(feed.Id)
 	if err == nil {
 		response.WriteEntity(Status{"fail", "Feed already exists"})
 		return
 	}
-	err = s.store.Put(&feed)
+	err = s.reader.GetStore().PutFeed(&feed)
 	if err != nil {
 		response.WriteEntity(Status{"fail", "Could not store Feed: " + err.Error()})
 		return
@@ -108,7 +105,7 @@ func (s *service) createFeed(request *restful.Request, response *restful.Respons
 }
 
 func (s *service) refreshFeed(request *restful.Request, response *restful.Response) {
-	err := s.rss.Fetch(request.PathParameter("feed-id"))
+	err := s.reader.GetRss().Fetch(request.PathParameter("feed-id"))
 	if err != nil {
 		response.WriteEntity(Status{"fail", err.Error()})
 	} else {
@@ -147,7 +144,7 @@ func registerStaticFiles() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/html/", http.StatusMovedPermanently)
 	})
-	dir := http.FileServer(http.Dir("."))
+	dir := http.FileServer(http.Dir("resources"))
 	http.Handle("/css/", dir)
 	http.Handle("/js/", dir)
 	http.Handle("/html/", dir)
