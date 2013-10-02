@@ -1,5 +1,7 @@
 package reader
 
+// TODO replace gween/gosqlite with mattn/go-sqlite since it supports the database/sql api
+
 import (
 	"encoding/json"
 	"errors"
